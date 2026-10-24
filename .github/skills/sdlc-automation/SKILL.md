@@ -2,25 +2,26 @@
 name: sdlc-automation
 description: >
   End-to-end SDLC automation skill that transforms Rally issues into
-  GitLab Merge Requests. Generates spec-driven documentation (requerimientos.md,
-  diseño.md), implements code changes, executes tests, manages git workflows
-  with glab CLI, and maintains bidirectional traceability between Rally and GitLab.
+  GitLab Merge Requests for Python and Java projects. Generates spec-driven documentation
+  (requerimientos.md, diseño.md), implements code changes, executes tests (pytest/mvn/gradle),
+  manages git workflows with glab CLI, and maintains bidirectional traceability between Rally and GitLab.
   Activate when user mentions Rally IDs like US12345, DE6789, or asks to
   "automate SDLC", "issue to PR", "rally to merge request".
 license: proprietary
 compatibility: >
   Requires glab CLI authenticated, Rally MCP server configured in
-  .vscode/mcp.json, git initialized repository.
+  .vscode/mcp.json, git initialized repository, Python 3.10+ or Java 17+.
 allowed-tools: terminal codebase editFiles fetch mcp:rally-mcp
 metadata:
   author: engineering-team
   version: "1.0.0"
   methodology: spec-driven-development
+  supported-stacks: "Python, Java"
 ---
 
 # SDLC Automation Skill — Procedimientos Operativos Estandarizados (SOP)
 
-Este skill define la secuencia de operaciones autónomas que el orquestador ejecuta para transformar una historia de usuario o defecto de Broadcom Rally en un Merge Request verificado en GitLab, garantizando compuertas humanas en cada transición de fase.
+Este skill define la secuencia de operaciones autónomas que el orquestador ejecuta para transformar una historia de usuario o defecto de Broadcom Rally en un Merge Request verificado en GitLab para proyectos **Python** y **Java**, garantizando compuertas humanas en cada transición de fase.
 
 ---
 
@@ -33,24 +34,31 @@ Activar este skill cuando ocurra cualquiera de las siguientes condiciones:
 
 ---
 
-## Fase 0: Descubrimiento de Contexto y Detección de Stack
+## Fase 0: Descubrimiento de Contexto y Detección de Stack (Python / Java)
 
 Antes de realizar cambios, el agente debe analizar el repositorio local para identificar el ecosistema tecnológico:
 
 ### Paso 0.1 — Detección Automática de Stack Tecnológico
-Ejecutar el script utilitario `.github/skills/sdlc-automation/scripts/detect-stack.sh` o evaluar la existencia de archivos indicadores:
-- `package.json` → Ecosistema **Node.js** (Gestor: npm/yarn/pnpm; Test: `npm test` o `npx vitest`/`jest`).
-- `pyproject.toml` / `setup.py` / `requirements.txt` → Ecosistema **Python** (Test: `pytest` o `python -m unittest`).
-- `*.csproj` / `*.sln` → Ecosistema **.NET** (Test: `dotnet test`).
-- `pom.xml` / `build.gradle` → Ecosistema **Java** (Test: `mvn test` o `./gradlew test`).
-- `go.mod` → Ecosistema **Go** (Test: `go test ./...`).
-- `Cargo.toml` → Ecosistema **Rust** (Test: `cargo test`).
+Ejecutar el script utilitario `.github/skills/sdlc-automation/scripts/detect-stack.sh` (o `detect-stack.bat` en Windows) o evaluar la existencia de archivos indicadores:
+- `pyproject.toml` / `requirements.txt` / `Pipfile` / `setup.py` → Ecosistema **Python**
+  - Gestores soportados: Poetry, Pipenv, pip / venv.
+  - Test runner: `pytest` / `poetry run pytest` / `python -m unittest discover`.
+  - Linter / formateo: `ruff`, `black`, `flake8`.
+- `pom.xml` → Ecosistema **Java (Maven)**
+  - Gestor: Maven (`mvn`).
+  - Test runner: `mvn test` (JUnit 5, TestNG).
+  - Linter: `mvn checkstyle:check`, Spotless.
+- `build.gradle` / `build.gradle.kts` → Ecosistema **Java (Gradle)**
+  - Gestor: Gradle (`./gradlew` o `gradle`).
+  - Test runner: `./gradlew test` (o `gradle test`).
+  - Linter: `./gradlew check`.
 
 ### Paso 0.2 — Inspección de Convenciones del Repositorio
 Mediante `#codebase`, identificar:
-- Estructura de carpetas (`src/`, `lib/`, `tests/`, `spec/`).
-- Estilo de tipado, formateo y linter configurado (ESLint, Prettier, Ruff, Black, etc.).
-- Patrones arquitectónicos predominantes (Clean Architecture, Hexagonal, MVC).
+- Estructura de carpetas (`src/`, `tests/` o `src/main/java`, `src/test/java`).
+- Estilo de tipado y formateo (type hints en Python, checkstyle en Java).
+- Modelos de datos y capas de persistencia (SQLAlchemy, SQL / JPA / Hibernate).
+- Patrones arquitectónicos predominantes (Clean Architecture, Hexagonal, MVC / Service Layer).
 
 ---
 
@@ -110,10 +118,10 @@ Utilizar la plantilla `.github/skills/sdlc-automation/templates/requerimientos.m
 ### Paso 2.2 — Generación de `.docs/diseño.md`
 Analizar el `#codebase` y utilizar la plantilla `.github/skills/sdlc-automation/templates/diseño.md`:
 1. Elaborar diagrama de arquitectura de componentes en sintaxis Mermaid.
-2. Definir la lista precisa de archivos a modificar y archivos nuevos a crear.
-3. Especificar esquemas de datos, DTOs y contratos de interfaces/funciones.
+2. Definir la lista precisa de archivos Python o Java a modificar y archivos nuevos a crear.
+3. Especificar esquemas de datos, DTOs (Pydantic / POJOs), entidades SQL y contratos de interfaces/funciones.
 4. Documentar decisiones de arquitectura clave (ADRs) con alternativas descartadas.
-5. Diseñar la estrategia de pruebas (unitarias, integración, casos límite).
+5. Diseñar la estrategia de pruebas (unitarias, integración, casos límite con pytest o JUnit 5).
 6. Evaluar vectores de seguridad conforme a `references/quality-checklist.md`.
 7. Diseñar el diagrama de secuencia Mermaid para el flujo principal.
 
@@ -133,24 +141,31 @@ Presentar ambos documentos al desarrollador:
 
 ## Fase 3: Implementación de Código y Ciclo de Auto-Sanación
 
-### Paso 3.1 — Escritura de Código Modular
+### Paso 3.1 — Escritura de Código Modular (Python / Java)
 1. Modificar y crear los archivos definidos en `.docs/diseño.md`.
 2. Incluir en la cabecera de cada archivo afectado el comentario de trazabilidad:
-   ```text
-   // Rally: {FormattedID} — Requisito EARS: {ID_REQUISITO}
-   ```
+   - En Python:
+     ```python
+     # Rally: {FormattedID} — Requisito EARS: {ID_REQUISITO}
+     ```
+   - En Java:
+     ```java
+     // Rally: {FormattedID} — Requisito EARS: {ID_REQUISITO}
+     ```
 3. Seguir estrictamente los principios SOLID y las directrices de `references/quality-checklist.md`.
-4. Respetar el estilo y patrones existentes en el repositorio sin introducir librerías redundantes.
+4. Respetar el estilo y patrones existentes en el repositorio sin introducir dependencias redundantes.
 
 ### Paso 3.2 — Ejecución de Pruebas y Bucle de Auto-Sanación (Self-Healing Loop)
-Ejecutar el comando de test correspondiente al stack detectado vía `#terminal`.
+Ejecutar el comando de test correspondiente al stack detectado vía `#terminal`:
+- **Python:** `pytest` (o `poetry run pytest` / `python -m unittest discover`).
+- **Java:** `mvn test` (o `./gradlew test` / `gradle test`).
 
 ```text
 iteracion = 0
 MAX_ITERACIONES = 3
 
 MIENTRAS los tests fallen Y iteracion < MAX_ITERACIONES:
-  1. Capturar el volcado de error (stack trace) de la consola.
+  1. Capturar el volcado de error (traceback / stack trace) de la consola.
   2. Diagnosticar la causa raíz comparando con diseño.md y el código actual.
   3. Aplicar una corrección quirúrgica (NUNCA reescribir archivos enteros sin necesidad).
   4. Reejecutar la suite de pruebas.
@@ -162,8 +177,9 @@ SI iteracion == MAX_ITERACIONES Y los tests aún fallan:
 
 ### Paso 3.3 — Verificación Estática de Calidad y OWASP
 Comprobar contra `references/quality-checklist.md`:
-- Ningún secreto ni credencial expuesta.
+- Ningún secreto ni credencial expuesta en archivos `.py`, `.java` ni ficheros de configuración (`application.yml`, `.env`).
 - Entradas sanitizadas y tipadas (OWASP A03 Injection).
+- Consultas SQL parametrizadas o mediante ORM seguro (SQLAlchemy, JPA).
 - Control de acceso validado en lógica de negocio (OWASP A01).
 - Cobertura de tests ≥ 80%.
 
@@ -209,7 +225,7 @@ Generar `.docs/report.md` utilizando la plantilla `templates/report.md`:
 - Resumen ejecutivo del trabajo realizado.
 - Matriz de trazabilidad (Archivo ↔ Requisito EARS).
 - Checklist SOLID y evaluación de seguridad OWASP.
-- Resumen métrico de pruebas y registro de deuda técnica.
+- Resumen métrico de pruebas (`pytest` o JUnit) y registro de deuda técnica.
 
 ### Paso 4.3 — Creación del Merge Request en Modo Borrador (`glab mr create`)
 Ejecutar el comando no interactivo conforme a `references/glab-commands.md`:

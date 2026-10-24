@@ -1,8 +1,8 @@
 @echo off
 rem ==============================================================================
 rem Script: detect-stack.bat
-rem Propósito: Detectar automáticamente el stack tecnológico, gestor de paquetes,
-rem            comando de pruebas y linter del repositorio del proyecto (Windows Batch).
+rem Propósito: Detectar automáticamente el stack tecnológico (Python o Java),
+rem            gestor de paquetes, comando de pruebas y linter del proyecto (Windows Batch).
 rem Salida: Pares clave-valor formateados para fácil consumo por scripts y agentes.
 rem ==============================================================================
 
@@ -21,60 +21,7 @@ set "BUILD_CMD=echo 'No build command detected'"
 set "RUNTIME_VERSION="
 
 rem ------------------------------------------------------------------------------
-rem 1. Detección de Node.js / TypeScript
-rem ------------------------------------------------------------------------------
-if exist "package.json" (
-    set "STACK=nodejs"
-
-    if exist "pnpm-lock.yaml" (
-        set "PACKAGE_MANAGER=pnpm"
-    ) else if exist "yarn.lock" (
-        set "PACKAGE_MANAGER=yarn"
-    ) else if exist "bun.lockb" (
-        set "PACKAGE_MANAGER=bun"
-    ) else (
-        set "PACKAGE_MANAGER=npm"
-    )
-
-    rem Verificar scripts en package.json
-    findstr /c:"\"test\"" package.json >nul 2>&1
-    if !errorlevel! equ 0 (
-        set "TEST_CMD=!PACKAGE_MANAGER! test"
-    ) else if exist "vitest.config.ts" (
-        set "TEST_CMD=npx vitest run"
-    ) else if exist "vitest.config.js" (
-        set "TEST_CMD=npx vitest run"
-    ) else if exist "jest.config.js" (
-        set "TEST_CMD=npx jest"
-    ) else if exist "jest.config.ts" (
-        set "TEST_CMD=npx jest"
-    )
-
-    findstr /c:"\"lint\"" package.json >nul 2>&1
-    if !errorlevel! equ 0 (
-        set "LINT_CMD=!PACKAGE_MANAGER! run lint"
-    ) else if exist ".eslintrc" (
-        set "LINT_CMD=npx eslint ."
-    ) else if exist ".eslintrc.json" (
-        set "LINT_CMD=npx eslint ."
-    ) else if exist "eslint.config.js" (
-        set "LINT_CMD=npx eslint ."
-    )
-
-    findstr /c:"\"build\"" package.json >nul 2>&1
-    if !errorlevel! equ 0 (
-        set "BUILD_CMD=!PACKAGE_MANAGER! run build"
-    )
-
-    where node >nul 2>&1
-    if !errorlevel! equ 0 (
-        for /f "tokens=*" %%v in ('node -v 2^>nul') do set "RUNTIME_VERSION=%%v"
-    )
-    goto :EMIT_RESULT
-)
-
-rem ------------------------------------------------------------------------------
-rem 2. Detección de Python
+rem 1. Detección de Python
 rem ------------------------------------------------------------------------------
 set "IS_PYTHON=0"
 if exist "pyproject.toml" set "IS_PYTHON=1"
@@ -94,6 +41,7 @@ if "%IS_PYTHON%"=="1" (
         set "PACKAGE_MANAGER=pipenv"
         set "TEST_CMD=pipenv run pytest"
         set "LINT_CMD=pipenv run flake8"
+        set "BUILD_CMD=pipenv lock"
     ) else (
         set "PACKAGE_MANAGER=pip"
         set "TEST_CMD=python -m unittest discover"
@@ -108,6 +56,7 @@ if "%IS_PYTHON%"=="1" (
             if !errorlevel! equ 0 set "TEST_CMD=pytest"
         )
         set "LINT_CMD=ruff check . 2>nul || flake8 2>nul || ver >nul"
+        set "BUILD_CMD=python -m build 2>nul || ver >nul"
     )
 
     where python >nul 2>&1
@@ -123,29 +72,7 @@ if "%IS_PYTHON%"=="1" (
 )
 
 rem ------------------------------------------------------------------------------
-rem 3. Detección de .NET (C# / F#)
-rem ------------------------------------------------------------------------------
-set "IS_DOTNET=0"
-if exist "*.csproj" set "IS_DOTNET=1"
-if exist "*.sln" set "IS_DOTNET=1"
-if exist "global.json" set "IS_DOTNET=1"
-
-if "%IS_DOTNET%"=="1" (
-    set "STACK=dotnet"
-    set "PACKAGE_MANAGER=nuget/dotnet"
-    set "TEST_CMD=dotnet test"
-    set "LINT_CMD=dotnet format --verify-no-changes"
-    set "BUILD_CMD=dotnet build"
-
-    where dotnet >nul 2>&1
-    if !errorlevel! equ 0 (
-        for /f "tokens=*" %%v in ('dotnet --version 2^>nul') do set "RUNTIME_VERSION=%%v"
-    )
-    goto :EMIT_RESULT
-)
-
-rem ------------------------------------------------------------------------------
-rem 4. Detección de Java (Maven / Gradle)
+rem 2. Detección de Java (Maven)
 rem ------------------------------------------------------------------------------
 if exist "pom.xml" (
     set "STACK=java-maven"
@@ -162,52 +89,30 @@ if exist "pom.xml" (
     goto :EMIT_RESULT
 )
 
+rem ------------------------------------------------------------------------------
+rem 3. Detección de Java (Gradle)
+rem ------------------------------------------------------------------------------
+set "IS_GRADLE=0"
 if exist "build.gradle" set "IS_GRADLE=1"
 if exist "build.gradle.kts" set "IS_GRADLE=1"
+
 if "%IS_GRADLE%"=="1" (
     set "STACK=java-gradle"
     set "PACKAGE_MANAGER=gradle"
     if exist "gradlew.bat" (
         set "TEST_CMD=gradlew.bat test"
         set "BUILD_CMD=gradlew.bat build"
+        set "LINT_CMD=gradlew.bat check"
     ) else (
         set "TEST_CMD=gradle test"
         set "BUILD_CMD=gradle build"
+        set "LINT_CMD=gradle check"
     )
-    set "LINT_CMD=echo 'Check gradle lint tasks'"
-    goto :EMIT_RESULT
-)
-
-rem ------------------------------------------------------------------------------
-rem 5. Detección de Go
-rem ------------------------------------------------------------------------------
-if exist "go.mod" (
-    set "STACK=golang"
-    set "PACKAGE_MANAGER=go modules"
-    set "TEST_CMD=go test ./..."
-    set "LINT_CMD=golangci-lint run 2>nul || go vet ./..."
-    set "BUILD_CMD=go build ./..."
-
-    where go >nul 2>&1
+    where java >nul 2>&1
     if !errorlevel! equ 0 (
-        for /f "tokens=*" %%v in ('go version 2^>nul') do set "RUNTIME_VERSION=%%v"
-    )
-    goto :EMIT_RESULT
-)
-
-rem ------------------------------------------------------------------------------
-rem 6. Detección de Rust
-rem ------------------------------------------------------------------------------
-if exist "Cargo.toml" (
-    set "STACK=rust"
-    set "PACKAGE_MANAGER=cargo"
-    set "TEST_CMD=cargo test"
-    set "LINT_CMD=cargo clippy"
-    set "BUILD_CMD=cargo build"
-
-    where rustc >nul 2>&1
-    if !errorlevel! equ 0 (
-        for /f "tokens=*" %%v in ('rustc --version 2^>nul') do set "RUNTIME_VERSION=%%v"
+        for /f "tokens=*" %%v in ('java -version 2^>^&1') do (
+            if not defined RUNTIME_VERSION set "RUNTIME_VERSION=%%v"
+        )
     )
     goto :EMIT_RESULT
 )

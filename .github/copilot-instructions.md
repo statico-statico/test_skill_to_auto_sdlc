@@ -1,6 +1,6 @@
-# GitHub Copilot Instructions — SDLC Automation Workspace
+# GitHub Copilot Instructions — SDLC Automation Workspace (Python / Java)
 
-Este archivo define las directrices maestras para GitHub Copilot y el Modo Agente en este repositorio.
+Este archivo define las directrices maestras para GitHub Copilot y el Modo Agente en este repositorio para proyectos **Python** y **Java**.
 
 ---
 
@@ -9,6 +9,7 @@ Este archivo define las directrices maestras para GitHub Copilot y el Modo Agent
 Este proyecto cuenta con un sistema especializado de automatización del ciclo de vida del software (SDLC) compuesto por:
 1. **Agente Especializado:** `@sdlc-orchestrator` (definido en `.github/agents/sdlc-orchestrator.agent.md`).
 2. **Agent Skill Principal:** `sdlc-automation` (definido en `.github/skills/sdlc-automation/SKILL.md`).
+3. **Stacks Soportados:** **Python** (pytest, Poetry, pip) y **Java** (Maven, Gradle, JUnit).
 
 ### Invocación Rápida
 Cuando el usuario mencione un identificador de Broadcom Rally (ej. `US10293`, `DE4512`) o solicite *"automatiza este issue"*, *"de issue a PR"* o *"crea el MR para la historia..."*, Copilot debe activar automáticamente el skill `sdlc-automation` o delegar la orquestación en `@sdlc-orchestrator`.
@@ -25,11 +26,16 @@ Cuando el usuario mencione un identificador de Broadcom Rally (ej. `US10293`, `D
    - El agente debe pausar la ejecución y solicitar confirmación expresa del desarrollador en cada una de las 4 compuertas:
      - **Gate 1:** Tras la ingesta y extracción de datos de Rally.
      - **Gate 2:** Tras la generación de `.docs/requerimientos.md` y `.docs/diseño.md`.
-     - **Gate 3:** Tras la implementación y ejecución exitosa de pruebas (100% en verde).
+     - **Gate 3:** Tras la implementación y ejecución exitosa de pruebas (100% en verde con `pytest` o `mvn/gradle test`).
      - **Gate 4:** Tras la publicación de la rama y creación del Draft MR en GitLab.
 3. **Trazabilidad Bidireccional Total:**
    - Todo archivo creado o modificado debe contener en sus líneas iniciales el comentario de trazabilidad:
-     ```typescript
+     ```python
+     # Python:
+     # Rally: {FormattedID} — Requisito EARS: {ID_REQUISITO}
+     ```
+     ```java
+     // Java:
      // Rally: {FormattedID} — Requisito EARS: {ID_REQUISITO}
      ```
    - Todos los commits y Merge Requests deben referenciar el identificador de Rally.
@@ -50,7 +56,9 @@ Cuando el usuario mencione un identificador de Broadcom Rally (ej. `US10293`, `D
   - `quality-checklist.md` (estándares SOLID, OWASP Top 10 y métricas).
   - `glab-commands.md` (guía rápida no interactiva de GitLab CLI).
 - **Scripts de Soporte:** `.github/skills/sdlc-automation/scripts/`
-  - `detect-stack.sh` (detección automática de framework, linter y tests).
-  - `git-workflow.sh` (orquestación segura de Git + glab).
-  - `validate-rally-fields.sh` (validación de campos y estados de Rally).
-- **Ejemplo Completo de Referencia:** `.github/skills/sdlc-automation/examples/completed-cycle/`
+  - `detect-stack.sh` / `detect-stack.bat` (detección automática de Python o Java).
+  - `git-workflow.sh` / `git-workflow.bat` (orquestación segura de Git + glab).
+  - `validate-rally-fields.sh` / `validate-rally-fields.bat` (validación de campos y estados de Rally).
+- **Ejemplos Completos de Referencia:** `.github/skills/sdlc-automation/examples/completed-cycle/`
+  - Python: `requerimientos_python.md`, `diseño_python.md`, `report_python.md`
+  - Java: `requerimientos_java.md`, `diseño_java.md`, `report_java.md`
