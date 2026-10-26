@@ -55,8 +55,8 @@ if not exist "%DESC_FILE%" (
     )
 )
 
-rem 3. Generar slug normalizado para la rama
-for /f "usebackq delims=" %%s in (`powershell -NoProfile -Command "$t = '%TITLE%'.ToLower() -replace '[^a-z0-9]+', '-' -replace '^-+|-+$', ''; if ($t.Length -gt 40) { $t = $t.Substring(0, 40) }; $t"`) do (
+rem 3. Generar slug normalizado para la rama (ejecución única de PowerShell)
+for /f "usebackq delims=" %%s in (`powershell -NoProfile -Command "$t = [regex]::Replace('%TITLE%'.ToLower(), '[^a-z0-9]+', '-').Trim('-'); if ($t.Length -gt 40) { $t = $t.Substring(0, 40) }; $t"`) do (
     set "CLEAN_TITLE=%%s"
 )
 if "%CLEAN_TITLE%"=="" set "CLEAN_TITLE=update"
@@ -73,7 +73,6 @@ git diff-index --quiet HEAD -- 2>nul
 if !errorlevel! equ 0 (
     echo AVISO: No se detectaron modificaciones nuevas en el arbol de trabajo para commitear.
 ) else (
-    set "COMMIT_MSG=feat(%FORMATTED_ID%): %TITLE%"
     (
         echo feat^(%FORMATTED_ID%^): %TITLE%
         echo.
@@ -103,19 +102,28 @@ rem 6. Crear Merge Request en GitLab vía glab CLI
 echo ==^> Creando Merge Request en GitLab con glab CLI...
 where glab >nul 2>&1
 if !errorlevel! equ 0 (
-    for /f "usebackq delims=" %%o in (`glab mr create --title "feat(%FORMATTED_ID%): %TITLE%" --description-file "%DESC_FILE%" --target-branch "%TARGET_BRANCH%" --source-branch "%BRANCH_NAME%" --draft --assignee @me --label "bot-generated,%FORMATTED_ID%" --yes 2^>^&1`) do (
-        echo %%o
-        for /f "tokens=*" %%u in ('powershell -NoProfile -Command "if ('%%o' -match 'https?://[^\s]+/merge_requests/(\d+)') { $matches[0] }"') do (
-            set "MR_URL=%%u"
-        )
-        for /f "tokens=*" %%i in ('powershell -NoProfile -Command "if ('%%o' -match '/merge_requests/(\d+)') { $matches[1] }"') do (
-            set "MR_IID=%%i"
-        )
+    set "GLAB_OUT_FILE=%TEMP%\glab_mr_out_%RANDOM%.txt"
+    glab mr create --title "feat(%FORMATTED_ID%): %TITLE%" --description-file "%DESC_FILE%" --target-branch "%TARGET_BRANCH%" --source-branch "%BRANCH_NAME%" --draft --assignee @me --label "bot-generated,%FORMATTED_ID%" --yes > "!GLAB_OUT_FILE!" 2>&1
+    type "!GLAB_OUT_FILE!"
+
+    for /f "usebackq tokens=1,2" %%A in (`powershell -NoProfile -Command "$content = Get-Content '!GLAB_OUT_FILE!' -Raw; if ($content -match 'https?://[^\s]+/merge_requests/(\d+)') { Write-Output ($matches[0] + ' ' + $matches[1]) }"`) do (
+        set "MR_URL=%%A"
+        set "MR_IID=%%B"
     )
+    del "!GLAB_OUT_FILE!" 2>nul
 
     if defined MR_IID (
         echo ==^> Anadiendo nota tecnica automatizada al MR #!MR_IID!...
-        glab mr note create "!MR_IID!" -m "## 🤖 Reporte de Validación Automatizada`n- **Rally Story:** %FORMATTED_ID%`n- **Documentación de Especificación:** \`.docs/requerimientos.md\` y \`.docs/diseno.md\`\`n- **Reporte Post-Tarea:** \`.docs/report.md\`\`n`nMerge Request generado en modo borrador (**Draft**) a la espera de aprobación humana." >nul 2>&1
+        (
+            echo ## 🤖 Reporte de Validación Automatizada
+            echo - **Rally Story:** %FORMATTED_ID%
+            echo - **Documentación:** `.docs/requerimientos.md` y `.docs/diseno.md`
+            echo - **Reporte Post-Tarea:** `.docs/report.md`
+            echo.
+            echo Merge Request generado en modo borrador ^(**Draft**^) a la espera de aprobación humana.
+        ) > "%TEMP%\mr_note_tmp.md"
+        glab mr note create "!MR_IID!" --file "%TEMP%\mr_note_tmp.md" >nul 2>&1
+        del "%TEMP%\mr_note_tmp.md" 2>nul
     )
 
     echo.

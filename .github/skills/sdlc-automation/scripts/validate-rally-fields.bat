@@ -27,17 +27,11 @@ if not exist "%INPUT_FILE%" (
 
 echo ==^> Validando artefacto Rally...
 
-rem Extraer campos clave utilizando PowerShell de forma nativa en Windows
-for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "$c = Get-Content -Raw -Path '%INPUT_FILE%' | ConvertFrom-Json; Write-Output $c.FormattedID" 2^>nul`) do (
-    set "FORMATTED_ID=%%v"
-)
-
-for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "$c = Get-Content -Raw -Path '%INPUT_FILE%' | ConvertFrom-Json; Write-Output $c.Name" 2^>nul`) do (
-    set "NAME=%%v"
-)
-
-for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "$c = Get-Content -Raw -Path '%INPUT_FILE%' | ConvertFrom-Json; Write-Output $c.ScheduleState" 2^>nul`) do (
-    set "SCHEDULE_STATE=%%v"
+rem Extraer campos clave en una única invocación rápida de PowerShell
+for /f "usebackq tokens=1,2* delims=|" %%A in (`powershell -NoProfile -Command "$c = Get-Content -Raw -Path '%INPUT_FILE%' | ConvertFrom-Json; Write-Output ($c.FormattedID + '|' + $c.ScheduleState + '|' + $c.Name)" 2^>nul`) do (
+    set "FORMATTED_ID=%%A"
+    set "SCHEDULE_STATE=%%B"
+    set "NAME=%%C"
 )
 
 rem 1. Validar presencia de FormattedID y formato

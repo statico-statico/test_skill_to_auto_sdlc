@@ -55,8 +55,10 @@ if "%IS_PYTHON%"=="1" (
             findstr /i /c:"pytest" requirements.txt >nul 2>&1
             if !errorlevel! equ 0 set "TEST_CMD=pytest"
         )
-        set "LINT_CMD=ruff check . 2>nul || flake8 2>nul || ver >nul"
-        set "BUILD_CMD=python -m build 2>nul || ver >nul"
+        set "LINT_CMD=flake8"
+        where ruff >nul 2>&1
+        if !errorlevel! equ 0 set "LINT_CMD=ruff check ."
+        set "BUILD_CMD=python -m build"
     )
 
     where python >nul 2>&1

@@ -29,15 +29,15 @@ fi
 extract_json_val() {
     local key="$1"
     if command -v python3 >/dev/null 2>&1; then
-        python3 -c "import sys, json; print(json.loads(sys.argv[1]).get(sys.argv[2], ''))" "$CONTENT" "$key" 2>/dev/null || echo ""
+        printf '%s' "$CONTENT" | python3 -c "import sys, json; print(json.load(sys.stdin).get(sys.argv[1], ''))" "$key" 2>/dev/null || echo ""
     elif command -v python >/dev/null 2>&1; then
-        python -c "import sys, json; print(json.loads(sys.argv[1]).get(sys.argv[2], ''))" "$CONTENT" "$key" 2>/dev/null || echo ""
-    elif command -v node >/dev/null 2>&1; then
-        node -e "try { const data = JSON.parse(process.argv[1]); console.log(data[process.argv[2]] || ''); } catch(e) {}" "$CONTENT" "$key" 2>/dev/null || echo ""
+        printf '%s' "$CONTENT" | python -c "import sys, json; print(json.load(sys.stdin).get(sys.argv[1], ''))" "$key" 2>/dev/null || echo ""
     elif command -v jq >/dev/null 2>&1; then
-        echo "$CONTENT" | jq -r ".$key // empty" 2>/dev/null || echo ""
+        printf '%s' "$CONTENT" | jq -r --arg k "$key" '.[$k] // empty' 2>/dev/null || echo ""
+    elif command -v node >/dev/null 2>&1; then
+        printf '%s' "$CONTENT" | node -e "let b='';process.stdin.on('data',c=>b+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(b)[process.argv[1]]||'')}catch(e){}});" "$key" 2>/dev/null || echo ""
     else
-        echo "$CONTENT" | grep -o "\"$key\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | sed -E 's/.*:[[:space:]]*"([^"]*)".*/\1/' || echo ""
+        printf '%s' "$CONTENT" | grep -o "\"$key\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | sed -E 's/.*:[[:space:]]*"([^"]*)".*/\1/' || echo ""
     fi
 }
 
