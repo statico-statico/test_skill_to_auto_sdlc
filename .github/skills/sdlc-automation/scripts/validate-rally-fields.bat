@@ -1,13 +1,13 @@
 @echo off
 rem ==============================================================================
 rem Script: validate-rally-fields.bat
-rem Propósito: Validar la integridad de los campos extraídos de Rally WSAPI y
-rem            comprobar las reglas de la máquina de estados antes de procesar (Windows Batch).
-rem Códigos de salida:
-rem   0 - Validación exitosa (Listo para procesar)
-rem   1 - Error de campos requeridos faltantes o malformados
-rem   2 - Error crítico: Artefacto en estado 'Accepted' (Inmutable, abortar)
-rem   3 - Advertencia: Artefacto en estado 'Completed' (Requiere confirmación humana)
+rem Purpose: Validate the integrity of fields extracted from Rally WSAPI and
+rem          enforce state machine rules before processing (Windows Batch).
+rem Exit codes:
+rem   0 - Validation successful (Ready for processing)
+rem   1 - Error: Missing or malformed required fields
+rem   2 - Critical error: Artifact in 'Accepted' state (Immutable, abort)
+rem   3 - Warning: Artifact in 'Completed' state (Requires human confirmation)
 rem ==============================================================================
 
 setlocal EnableDelayedExpansion
@@ -15,46 +15,46 @@ setlocal EnableDelayedExpansion
 set "INPUT_FILE=%~1"
 
 if "%INPUT_FILE%"=="" (
-    echo ERROR: Debe proporcionar un archivo JSON como parametro. >&2
-    echo Uso: %~nx0 ^<rally-payload.json^> >&2
+    echo ERROR: A JSON file parameter is required. >&2
+    echo Usage: %~nx0 ^<rally-payload.json^> >&2
     exit /b 1
 )
 
 if not exist "%INPUT_FILE%" (
-    echo ERROR: El archivo '%INPUT_FILE%' no existe. >&2
+    echo ERROR: File '%INPUT_FILE%' does not exist. >&2
     exit /b 1
 )
 
-echo ==^> Validando artefacto Rally...
+echo ==^> Validating Rally artifact...
 
-rem Extraer campos clave en una única invocación rápida de PowerShell
+rem Extract key fields in a single fast PowerShell invocation
 for /f "usebackq tokens=1,2* delims=|" %%A in (`powershell -NoProfile -Command "$c = Get-Content -Raw -Path '%INPUT_FILE%' | ConvertFrom-Json; Write-Output ($c.FormattedID + '|' + $c.ScheduleState + '|' + $c.Name)" 2^>nul`) do (
     set "FORMATTED_ID=%%A"
     set "SCHEDULE_STATE=%%B"
     set "NAME=%%C"
 )
 
-rem 1. Validar presencia de FormattedID y formato
+rem 1. Validate FormattedID presence and format
 if "%FORMATTED_ID%"=="" (
-    echo [ERROR]: El campo 'FormattedID' es obligatorio y no fue encontrado. >&2
+    echo [ERROR]: 'FormattedID' is required and was not found. >&2
     exit /b 1
 )
 
 for /f "tokens=*" %%m in ('powershell -NoProfile -Command "if ('%FORMATTED_ID%' -match '^(US|DE)[0-9]+$') { 'VALID' } else { 'INVALID' }"') do (
     if "%%m"=="INVALID" (
-        echo [ADVERTENCIA]: 'FormattedID' ^(%FORMATTED_ID%^) no coincide con el formato estandar ^(US12345 o DE12345^). >&2
+        echo [WARNING]: 'FormattedID' ^(%FORMATTED_ID%^) does not match standard pattern ^(US12345 or DE12345^). >&2
     )
 )
 
-rem 2. Validar presencia de Name / Título
+rem 2. Validate Name / Title presence
 if "%NAME%"=="" (
-    echo [ERROR]: El campo 'Name' ^(titulo de la historia^) esta vacio. >&2
+    echo [ERROR]: 'Name' field is empty. >&2
     exit /b 1
 )
 
-rem 3. Validar ScheduleState
+rem 3. Validate ScheduleState
 if "%SCHEDULE_STATE%"=="" (
-    echo [ADVERTENCIA]: 'ScheduleState' no definido. Se asume 'Defined'. >&2
+    echo [WARNING]: 'ScheduleState' not defined. Defaulting to 'Defined'. >&2
     set "SCHEDULE_STATE=Defined"
 )
 
@@ -63,27 +63,27 @@ echo     - Name:           %NAME%
 echo     - ScheduleState:  %SCHEDULE_STATE%
 
 if /i "%SCHEDULE_STATE%"=="Accepted" (
-    echo [ERROR CRITICO] [Codigo 2]: El artefacto %FORMATTED_ID% ya se encuentra en estado 'Accepted'. >&2
-    echo     Las historias aceptadas por el Product Owner son inmutables por politica de auditoria. >&2
-    echo     ABORTANDO proceso. >&2
+    echo [CRITICAL ERROR] [Code 2]: Artifact %FORMATTED_ID% is already in 'Accepted' state. >&2
+    echo     Accepted stories are immutable per compliance and audit policies. >&2
+    echo     ABORTING process. >&2
     exit /b 2
 )
 
 if /i "%SCHEDULE_STATE%"=="Completed" (
-    echo [ADVERTENCIA] [Codigo 3]: El artefacto %FORMATTED_ID% ya figura como 'Completed'. >&2
-    echo     Se requiere confirmacion humana explicita para reprocesar o reabrir el desarrollo. >&2
+    echo [WARNING] [Code 3]: Artifact %FORMATTED_ID% is already marked as 'Completed'. >&2
+    echo     Explicit human confirmation is required to re-process. >&2
     exit /b 3
 )
 
 if /i "%SCHEDULE_STATE%"=="Defined" (
-    echo [OK]: Artefacto listo. Transicionara de 'Defined' -^> 'In-Progress'.
+    echo [OK]: Artifact ready. Transitioning 'Defined' -^> 'In-Progress'.
     exit /b 0
 )
 
 if /i "%SCHEDULE_STATE%"=="In-Progress" (
-    echo [OK]: Artefacto en curso ^('In-Progress'^). Continuando desarrollo.
+    echo [OK]: Artifact already 'In-Progress'. Continuing development.
     exit /b 0
 )
 
-echo [ADVERTENCIA]: Estado '%SCHEDULE_STATE%' no estandar pero procesable.
+echo [WARNING]: State '%SCHEDULE_STATE%' is non-standard but processable.
 exit /b 0

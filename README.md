@@ -1,117 +1,117 @@
-# 🚀 SDLC Copilot Agent Skill: De Rally Issue a GitLab Merge Request (Python / Java)
+# 🚀 SDLC Copilot Agent Skill: From Rally Issue to GitLab Merge Request (Python / Java)
 
-> **Solución de Automatización End-to-End del Ciclo de Vida del Software (SDLC)**  
-> Integra **Broadcom Rally MCP**, **GitHub Copilot Agent Mode** y **GitLab CLI (`glab`)** bajo una metodología rigurosa de **Desarrollo Guiado por Especificaciones (Spec-Driven Development)** con compuertas humanas obligatorias (*Human-in-the-Loop*), optimizado para **Python** y **Java**.
+> **End-to-End Software Development Life Cycle (SDLC) Automation Solution**  
+> Integrates **Broadcom Rally MCP**, **GitHub Copilot Agent Mode**, and **GitLab CLI (`glab`)** under a rigorous **Spec-Driven Development** methodology with mandatory **Human-in-the-Loop** gates, optimized for **Python** and **Java**.
 
 ---
 
-## 📌 1. Visión General y Flujo de Trabajo
+## 📌 1. Overview & Workflow
 
-Este repositorio contiene la arquitectura completa de un **Agent Skill** y un **Custom Agent** para VS Code, diseñado para transformar un requerimiento de negocio de Rally en un Merge Request verificado y documentado en GitLab para proyectos **Python** y **Java**:
+This repository provides an **Agent Skill** and **Custom Agent** for VS Code, designed to transform a business requirement from Broadcom Rally into a verified, documented Merge Request in GitLab:
 
 ```
-Rally Issue ➔ requerimientos.md (EARS) ➔ diseño.md (Mermaid) ➔ Código (Python/Java) ➔ Tests (pytest/mvn) ➔ Git Branch ➔ Draft MR (glab) ➔ Rally Update ➔ report.md
+Rally Issue ➔ requirements.md (EARS) ➔ design.md (Mermaid) ➔ Code (Python/Java) ➔ Tests (pytest/mvn) ➔ Git Branch ➔ Draft MR (glab) ➔ Rally Update ➔ report.md
 ```
 
-### Diagrama de Estados y Compuertas Humanas
+### State Machine & Human Gates Diagram
 
 ```mermaid
 graph TD
-    START["🎯 Usuario invoca:<br/>'@sdlc-orchestrator con US10293'"] --> P0["⚙️ Phase 0: Context Discovery<br/>detect-stack.sh/.bat (Python/Java)"]
+    START["🎯 User triggers:<br/>'@sdlc-orchestrator with US10293'"] --> P0["⚙️ Phase 0: Discovery<br/>detect-stack.sh/.bat (Python/Java)"]
     P0 --> P1["📥 Phase 1: Rally Ingestion<br/>Rally MCP: fetch fields"]
     P1 --> V1{"ScheduleState?"}
-    V1 -->|Accepted| ABORT["🛑 ABORT<br/>Artefacto Inmutable"]
-    V1 -->|Defined/In-Progress| P1b["📝 Normalizar HTML<br/>Defined ➔ In-Progress"]
-    P1b --> G1{"🚪 GATE 1<br/>¿Confirmar alcance Rally?"}
-    G1 -->|❌ Ajustar| P1
-    G1 -->|✅ Aprobado| P2["📋 Phase 2: Spec Generation<br/>requerimientos.md + diseño.md"]
-    P2 --> P2a["📄 .docs/requerimientos.md<br/>(Notación formal EARS)"]
-    P2 --> P2b["📐 .docs/diseño.md<br/>(Mermaid + Contratos)"]
+    V1 -->|Accepted| ABORT["🛑 ABORT<br/>Immutable Artifact"]
+    V1 -->|Defined/In-Progress| P1b["📝 Sanitize HTML<br/>Defined ➔ In-Progress"]
+    P1b --> G1{"🚪 GATE 1<br/>Confirm Rally Scope?"}
+    G1 -->|❌ Adjust| P1
+    G1 -->|✅ Approved| P2["📋 Phase 2: Spec Generation<br/>requirements.md + design.md"]
+    P2 --> P2a["📄 .docs/requirements.md<br/>(Formal EARS Notation)"]
+    P2 --> P2b["📐 .docs/design.md<br/>(Mermaid + Contracts)"]
     P2a --> G2
-    P2b --> G2{"🚪 GATE 2<br/>¿Aprobar especificaciones?"}
-    G2 -->|❌ Ajustar| P2
-    G2 -->|✅ Aprobado| P3["💻 Phase 3: Implementation<br/>Código + Self-Healing Tests"]
-    P3 --> P3a["✍️ Escribir código Python/Java + Trazabilidad"]
-    P3a --> P3b["🧪 Ejecutar suite de pruebas (pytest/mvn/gradle)"]
-    P3b --> P3c{"¿Tests en verde?"}
+    P2b --> G2{"🚪 GATE 2<br/>Approve Specifications?"}
+    G2 -->|❌ Adjust| P2
+    G2 -->|✅ Approved| P3["💻 Phase 3: Implementation<br/>Code + Self-Healing Tests"]
+    P3 --> P3a["✍️ Write Python/Java code + Traceability"]
+    P3a --> P3b["🧪 Execute test suite (pytest/mvn/gradle)"]
+    P3b --> P3c{"Tests passing?"}
     P3c -->|❌ iter < 3| P3a
-    P3c -->|❌ iter ≥ 3| FAIL["⚠️ STOP<br/>Solicitar asistencia humana"]
-    P3c -->|✅ 100% Green| G3{"🚪 GATE 3<br/>¿Aprobar implementación?"}
-    G3 -->|❌ Ajustar| P3
-    G3 -->|✅ Aprobado| P4["🔀 Phase 4: Git + GitLab MR<br/>Branch + Commit + glab CLI"]
+    P3c -->|❌ iter ≥ 3| FAIL["⚠️ STOP<br/>Request human assistance"]
+    P3c -->|✅ 100% Green| G3{"🚪 GATE 3<br/>Approve Implementation?"}
+    G3 -->|❌ Adjust| P3
+    G3 -->|✅ Approved| P4["🔀 Phase 4: Git + GitLab MR<br/>Branch + Commit + glab CLI"]
     P4 --> P4a["🌿 git checkout -b feature/..."]
-    P4a --> P4b["📊 Generar .docs/report.md"]
+    P4a --> P4b["📊 Generate .docs/report.md"]
     P4b --> P4c["📬 glab mr create --draft --yes"]
     P4c --> P4d["💬 glab mr note create"]
-    P4d --> G4{"🚪 GATE 4<br/>¿Validar MR creado?"}
-    G4 -->|❌ Ajustar| P4
-    G4 -->|✅ Aprobado| P5["🏁 Phase 5: Rally Closure<br/>Sync & Trazabilidad Cruzada"]
+    P4d --> G4{"🚪 GATE 4<br/>Validate Draft MR?"}
+    G4 -->|❌ Adjust| P4
+    G4 -->|✅ Approved| P5["🏁 Phase 5: Rally Closure<br/>Sync & Bidirectional Links"]
     P5 --> P5a["✅ Rally ScheduleState ➔ Completed"]
-    P5a --> P5b["💬 Comentario de Discusión en Rally"]
-    P5b --> DONE["🎉 Ciclo SDLC Finalizado<br/>Pendiente: PO Acceptance"]
+    P5a --> P5b["💬 Discussion Note in Rally"]
+    P5b --> DONE["🎉 SDLC Cycle Completed<br/>Pending: PO Acceptance"]
 ```
 
 ---
 
-## 📂 2. Estructura del Proyecto
+## 📂 2. Repository Structure
 
 ```text
 Issue_to_PR_Gemini/
 ├── .github/
 │   ├── agents/
-│   │   └── sdlc-orchestrator.agent.md        ← Agente orquestador senior (@sdlc-orchestrator)
+│   │   └── sdlc-orchestrator.agent.md        ← Senior orchestrator agent (@sdlc-orchestrator)
 │   │
 │   ├── skills/
 │   │   └── sdlc-automation/
-│   │       ├── SKILL.md                      ← Procedimientos operativos estándar (SOP)
+│   │       ├── SKILL.md                      ← Standard Operating Procedure (SOP)
 │   │       │
-│   │       ├── references/                   ← Bases de conocimiento técnico
-│   │       │   ├── ears-notation.md          ← Guía sintáctica de los 5 patrones EARS
-│   │       │   ├── rally-fields-map.md       ← Mapeo WSAPI, ScheduleState y limpieza HTML
-│   │       │   ├── quality-checklist.md      ← Checklist SOLID, OWASP Top 10 y métricas
-│   │       │   └── glab-commands.md          ← Guía de comandos no interactivos glab CLI
+│   │       ├── references/                   ← Technical knowledge base
+│   │       │   ├── ears-notation.md          ← Syntax guide for 5 core EARS patterns
+│   │       │   ├── rally-fields-map.md       ← WSAPI mapping, state machine & HTML sanitization
+│   │       │   ├── quality-checklist.md      ← SOLID, OWASP Top 10 & code hygiene checklist
+│   │       │   └── glab-commands.md          ← Non-interactive GitLab CLI reference
 │   │       │
-│   │       ├── templates/                    ← Plantillas estandarizadas para documentos
-│   │       │   ├── requerimientos.md         ← Plantilla de requisitos formales EARS
-│   │       │   ├── diseño.md                 ← Plantilla de diseño técnico y Mermaid
-│   │       │   ├── report.md                 ← Plantilla de reporte post-tarea de calidad
-│   │       │   └── mr-description.md         ← Plantilla para cuerpo del Merge Request
+│   │       ├── templates/                    ← Standardized documentation templates
+│   │       │   ├── requirements.md           ← Formal EARS requirements template
+│   │       │   ├── design.md                 ← Technical design & Mermaid architecture template
+│   │       │   ├── report.md                 ← Post-task quality report template
+│   │       │   └── mr-description.md         ← GitLab Merge Request body template
 │   │       │
-│   │       ├── scripts/                      ← Automatización ejecutable auxiliar (.sh y .bat)
-│   │       │   ├── detect-stack.sh / .bat    ← Detección automática de Python o Java
-│   │       │   ├── git-workflow.sh / .bat    ← Secuencia segura de Git + glab CLI
-│   │       │   └── validate-rally-fields.sh / .bat ← Validador de esquemas y estados de Rally
+│   │       ├── scripts/                      ← Auxiliary executable automation (.sh & .bat)
+│   │       │   ├── detect-stack.sh / .bat    ← Automated Python / Java stack detection
+│   │       │   ├── git-workflow.sh / .bat    ← Safe Git + glab CLI orchestration
+│   │       │   └── validate-rally-fields.sh / .bat ← Rally schema & state machine validator
 │   │       │
 │   │       └── examples/
-│   │           └── completed-cycle/          ← Ciclos completos de referencia por stack
-│   │               ├── requerimientos_python.md, diseño_python.md, report_python.md
-│   │               └── requerimientos_java.md, diseño_java.md, report_java.md
+│   │           └── completed-cycle/          ← End-to-end reference examples by stack
+│   │               ├── requirements_python.md, design_python.md, report_python.md
+│   │               └── requirements_java.md, design_java.md, report_java.md
 │   │
-│   └── copilot-instructions.md               ← Reglas maestras para VS Code Copilot
+│   └── copilot-instructions.md               ← High-level directives and routing
 │
 ├── .vscode/
-│   └── mcp.json                              ← Configuración MCP segura para Broadcom Rally
+│   └── mcp.json                              ← Secure Rally MCP server configuration
 │
-└── README.md                                 ← Documentación global del sistema
+└── README.md                                 ← Global project documentation
 ```
 
 ---
 
-## 🛠️ 3. Requisitos Previos y Configuración
+## 🛠️ 3. Prerequisites & Setup
 
-### 1. Entorno de Desarrollo
-- **Visual Studio Code** con soporte para **GitHub Copilot Agent Mode**.
-- **Entorno de ejecución:** Python 3.10+ (`pytest`, `poetry`, `pip`) o Java 17+ (Maven `mvn` o Gradle `gradle`).
-- **Git** inicializado en el repositorio de trabajo.
-- **GitLab CLI (`glab`)** instalado y autenticado:
+### 1. Development Environment
+- **Visual Studio Code** with **GitHub Copilot Agent Mode** support.
+- **Runtimes:** Python 3.10+ (`pytest`, `poetry`, `pip`) or Java 17+ (Maven `mvn` or Gradle `gradle`).
+- **Git** initialized in the project workspace.
+- **GitLab CLI (`glab`)** installed and authenticated:
   ```bash
   glab auth status
-  # Si no está autenticado:
+  # If unauthenticated:
   glab auth login
   ```
 
-### 2. Configuración de Rally MCP
-El archivo `.vscode/mcp.json` incluye la definición del servidor MCP. Al iniciar VS Code, el IDE solicitará de forma segura el Token de Acceso Personal (PAT) sin exponer credenciales en el código:
+### 2. Rally MCP Configuration
+The `.vscode/mcp.json` file defines the MCP server. VS Code will securely prompt for the Personal Access Token (PAT) upon startup without hardcoding secrets:
 ```json
 {
   "servers": {
@@ -128,36 +128,22 @@ El archivo `.vscode/mcp.json` incluye la definición del servidor MCP. Al inicia
 
 ---
 
-## 🚀 4. Guía de Uso Paso a Paso
+## 🚀 4. Step-by-Step Usage
 
-### Paso 1: Invocación del Agente
-En el panel de chat de VS Code en **Agent Mode**, introduce:
+### Step 1: Trigger the Agent
+In VS Code Copilot Chat in **Agent Mode**, run:
 ```text
-@sdlc-orchestrator Desarrolla la historia de usuario US10293
+@sdlc-orchestrator Implement user story US10293
 ```
-*O alternativamente:*
+*Or alternatively:*
 ```text
-Automatiza el requerimiento US10293 de Rally hasta Merge Request
+Automate Rally requirement US10293 to Merge Request
 ```
 
-### Paso 2: Validación de Compuertas Humanas
-El agente se detendrá de manera determinista en cada una de las 4 compuertas:
+### Step 2: Human Review Gates
+The agent halts deterministically at each of the 4 gates:
 
-1. **Gate 1 (Contexto de Rally):** Revisa el título, descripción limpia y criterios detectados. Confirma si el alcance es correcto.
-2. **Gate 2 (Aprobación de Specs):** Inspecciona `.docs/requerimientos.md` y `.docs/diseño.md`. Puedes solicitar ajustes en el chat antes de aprobar.
-3. **Gate 3 (Revisión de Código):** Verifica el resumen de archivos modificados y la confirmación de que el 100% de los tests pasan (`pytest` o `mvn test`).
-4. **Gate 4 (Revisión de MR):** Inspecciona el enlace del Draft MR en GitLab antes de que el agente actualice Rally.
-
-### Paso 3: Cierre Automático
-El agente actualizará Rally a `Completed`, registrará el comentario con el enlace al MR y presentará el reporte final de cierre.
-
----
-
-## 🔒 5. Políticas de Seguridad y Buenas Prácticas
-
-- **Stacks Soportados Exclusivos:** Python y Java (con soporte a persistencia SQL / JPA / SQLAlchemy / Redis).
-- **Protección contra Fusiones Prematuras:** Todo Merge Request se crea siempre con la bandera `--draft`.
-- **Inmutabilidad de Artefactos Aceptados:** Si la historia en Rally ya está en estado `Accepted`, el agente aborta automáticamente.
-- **Bucle de Auto-Sanación Seguro:** Si las pruebas fallan durante la Fase 3, el agente analiza el stack trace y corrige el código quirúrgicamente hasta un máximo de 3 intentos; si persisten los fallos, se detiene y solicita revisión humana.
-- **Sin Comandos Destructivos:** Prohibido el uso de `git push --force` o modificaciones fuera del workspace.
-- **Trazabilidad Integral:** Cada archivo modificado incluye cabeceras comentadas con el identificador de Rally, y cada commit sigue el estándar de *Conventional Commits*.
+1. **Gate 1 (Rally Context):** Reviews sanitized title, description, and criteria. Confirms scope.
+2. **Gate 3 (Spec Approval):** Inspects `.docs/requirements.md` and `.docs/design.md`.
+3. **Gate 3 (Implementation Review):** Verifies changed file summary and 100% green test suite.
+4. **Gate 4 (MR Verification):** Inspects Draft MR link in GitLab before closing Rally issue.

@@ -1,31 +1,31 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Script: validate-rally-fields.sh
-# Propósito: Validar la integridad de los campos extraídos de Rally WSAPI y
-#            comprobar las reglas de la máquina de estados antes de procesar.
-# Códigos de salida:
-#   0 - Validación exitosa (Listo para procesar)
-#   1 - Error de campos requeridos faltantes o malformados
-#   2 - Error crítico: Artefacto en estado 'Accepted' (Inmutable, abortar)
-#   3 - Advertencia: Artefacto en estado 'Completed' (Requiere confirmación humana)
+# Purpose: Validate the integrity of fields extracted from Rally WSAPI and
+#          enforce state machine rules before processing.
+# Exit codes:
+#   0 - Validation successful (Ready to process)
+#   1 - Error: Missing or malformed required fields
+#   2 - Critical error: Artifact in 'Accepted' state (Immutable, abort)
+#   3 - Warning: Artifact in 'Completed' state (Requires human confirmation)
 # ==============================================================================
 
 set -euo pipefail
 
 INPUT_FILE="${1:-}"
 
-# Si se pasa un archivo, leerlo; de lo contrario, intentar leer de stdin
+# Read from file or standard input
 if [ -n "$INPUT_FILE" ] && [ -f "$INPUT_FILE" ]; then
     CONTENT=$(tr -d '\r' < "$INPUT_FILE")
 elif [ ! -t 0 ]; then
     CONTENT=$(cat | tr -d '\r')
 else
-    echo "ERROR: Debe proporcionar un archivo JSON o pasar datos vía stdin." >&2
-    echo "Uso: $0 <rally-payload.json> o cat payload.json | $0" >&2
+    echo "ERROR: Must provide a JSON file or pass data via stdin." >&2
+    echo "Usage: $0 <rally-payload.json> or cat payload.json | $0" >&2
     exit 1
 fi
 
-# Extraer campos clave (soporta python, node, jq o grep/sed como fallback seguro)
+# Extract key fields safely supporting python, node, jq, or grep/sed
 extract_json_val() {
     local key="$1"
     if command -v python3 >/dev/null 2>&1; then
@@ -41,32 +41,31 @@ extract_json_val() {
     fi
 }
 
-
 FORMATTED_ID=$(extract_json_val "FormattedID")
 NAME=$(extract_json_val "Name")
 SCHEDULE_STATE=$(extract_json_val "ScheduleState")
 
-echo "==> Validando artefacto Rally..."
+echo "==> Validating Rally artifact..."
 
-# 1. Validar presencia de FormattedID y formato
+# 1. Validate FormattedID presence and format
 if [ -z "$FORMATTED_ID" ]; then
-    echo "❌ ERROR: El campo 'FormattedID' es obligatorio y no fue encontrado." >&2
+    echo "❌ ERROR: 'FormattedID' field is required and was not found." >&2
     exit 1
 fi
 
 if ! echo "$FORMATTED_ID" | grep -Eq '^(US|DE)[0-9]+$'; then
-    echo "⚠️ ADVERTENCIA: 'FormattedID' ($FORMATTED_ID) no coincide con el formato estándar (US12345 o DE12345)." >&2
+    echo "⚠️ WARNING: 'FormattedID' ($FORMATTED_ID) does not match standard pattern (US12345 or DE12345)." >&2
 fi
 
-# 2. Validar presencia de Name / Título
+# 2. Validate Name / Title presence
 if [ -z "$NAME" ]; then
-    echo "❌ ERROR: El campo 'Name' (título de la historia) está vacío." >&2
+    echo "❌ ERROR: 'Name' (story title) field is empty." >&2
     exit 1
 fi
 
-# 3. Validar ScheduleState
+# 3. Validate ScheduleState
 if [ -z "$SCHEDULE_STATE" ]; then
-    echo "⚠️ ADVERTENCIA: 'ScheduleState' no definido. Se asume 'Defined'." >&2
+    echo "⚠️ WARNING: 'ScheduleState' not defined. Defaulting to 'Defined'." >&2
     SCHEDULE_STATE="Defined"
 fi
 
@@ -74,28 +73,28 @@ echo "    - FormattedID:    $FORMATTED_ID"
 echo "    - Name:           $NAME"
 echo "    - ScheduleState:  $SCHEDULE_STATE"
 
-case "$SCHEDULE_STATE" in
-    "Accepted")
-        echo "🛑 ERROR CRÍTICO [Código 2]: El artefacto $FORMATTED_ID ya se encuentra en estado 'Accepted'." >&2
-        echo "    Las historias aceptadas por el Product Owner son inmutables por política de auditoría." >&2
-        echo "    ABORTANDO proceso." >&2
-        exit 2
-        ;;
-    "Completed")
-        echo "⚠️ ADVERTENCIA [Código 3]: El artefacto $FORMATTED_ID ya figura como 'Completed'." >&2
-        echo "    Se requiere confirmación humana explícita para reprocesar o reabrir el desarrollo." >&2
-        exit 3
-        ;;
-    "Defined")
-        echo "✅ OK: Artefacto listo. Transicionará de 'Defined' ➔ 'In-Progress'."
-        exit 0
-        ;;
-    "In-Progress")
-        echo "✅ OK: Artefacto en curso ('In-Progress'). Continuando desarrollo."
-        exit 0
-        ;;
-    *)
-        echo "⚠️ Estado '$SCHEDULE_STATE' no estándar pero procesable."
-        exit 0
-        ;;
-esac
+if [ "$SCHEDULE_STATE" = "Accepted" ]; then
+    echo "🛑 [CRITICAL ERROR] [Code 2]: Artifact $FORMATTED_ID is already in 'Accepted' state." >&2
+    echo "    Accepted stories are immutable per audit policies." >&2
+    echo "    ABORTING process." >&2
+    exit 2
+fi
+
+if [ "$SCHEDULE_STATE" = "Completed" ]; then
+    echo "⚠️ [WARNING] [Code 3]: Artifact $FORMATTED_ID is already marked as 'Completed'." >&2
+    echo "    Explicit human confirmation is required to re-process." >&2
+    exit 3
+fi
+
+if [ "$SCHEDULE_STATE" = "Defined" ]; then
+    echo "✅ [OK]: Artifact ready. Transitioning 'Defined' -> 'In-Progress'."
+    exit 0
+fi
+
+if [ "$SCHEDULE_STATE" = "In-Progress" ]; then
+    echo "✅ [OK]: Artifact in progress ('In-Progress'). Continuing development."
+    exit 0
+fi
+
+echo "⚠️ [WARNING]: State '$SCHEDULE_STATE' is non-standard but processable."
+exit 0

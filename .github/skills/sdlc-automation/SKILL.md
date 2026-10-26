@@ -9,81 +9,81 @@ compatibility: >
   Requires glab CLI, Rally MCP server, Git, Python 3.10+ or Java 17+.
 allowed-tools: terminal codebase editFiles fetch mcp:rally-mcp
 metadata:
-  version: "2.0.0"
+  version: "2.1.0"
   methodology: spec-driven-development
   supported-stacks: "Python, Java"
 ---
 
-# SDLC Automation Skill — Procedimiento Operativo Estándar (SOP)
+# SDLC Automation Skill — Standard Operating Procedure (SOP)
 
-Este skill define la secuencia estandarizada para transformar un requerimiento de Rally en un Merge Request en GitLab con compuertas humanas obligatorias.
-
----
-
-## 0. Triggers de Activación
-- Identificador Rally en el prompt: `US\d+` (User Story) o `DE\d+` (Defect).
-- Petición del usuario: *"automatiza este issue"*, *"de issue a PR"*, *"crea el MR para US..."*.
+This skill defines the standardized sequence for transforming a Broadcom Rally issue into a verified GitLab Merge Request with mandatory human gates.
 
 ---
 
-## Matriz de Fases y Compuertas Humanas
+## 0. Activation Triggers
+- Rally identifier in the prompt: `US\d+` (User Story) or `DE\d+` (Defect).
+- User prompt: *"automate this issue"*, *"issue to PR"*, *"create MR for US..."*.
 
-| Fase | Acción Principal | Entradas / Herramientas | Salida / Artefacto | 🚪 Compuerta Humana |
+---
+
+## Phase Matrix & Human Gates
+
+| Phase | Core Action | Inputs / Tools | Output / Artifact | 🚪 Human Gate |
 | :--- | :--- | :--- | :--- | :--- |
-| **0. Stack** | Detectar lenguaje y runner | `detect-stack.bat` / `.sh` | Variables de stack | Automática |
-| **1. Ingesta** | Extraer y validar ticket Rally | `mcp:rally-mcp` | Datos limpios de ticket | **Gate 1:** Validar alcance |
-| **2. Specs** | Formular EARS y Arquitectura | `templates/requerimientos.md`, `diseño.md` | `.docs/requerimientos.md`, `.docs/diseño.md` | **Gate 2:** Aprobar diseño |
-| **3. Build** | Implementar código y tests | `#editFiles`, runner tests (max 3 reintentos) | Código fuente + tests 100% verde | **Gate 3:** Aprobar código |
-| **4. GitLab** | Branch, commit, report y MR | `git`, `glab mr create --draft` | Rama remota + Draft MR + `.docs/report.md` | **Gate 4:** Validar MR |
-| **5. Cierre** | Sincronizar Rally | `mcp:rally-mcp` | Rally `Completed` + comentario cruzado | Cierre final |
+| **0. Stack** | Detect language and test runner | `detect-stack.bat` / `.sh` | Stack variables | Automated |
+| **1. Ingest** | Fetch and validate Rally ticket | `mcp:rally-mcp` | Sanitized ticket data | **Gate 1:** Validate Scope |
+| **2. Specs** | Formulate EARS & Architecture | `templates/requirements.md`, `design.md` | `.docs/requirements.md`, `.docs/design.md` | **Gate 2:** Approve Specs |
+| **3. Build** | Implement code & test loop | `#editFiles`, test runner (max 3 retries) | Source code + 100% green tests | **Gate 3:** Approve Code |
+| **4. GitLab** | Branch, commit, report & MR | `git`, `glab mr create --draft` | Remote branch + Draft MR + `.docs/report.md` | **Gate 4:** Verify MR |
+| **5. Closure** | Sync & cross-reference Rally | `mcp:rally-mcp` | Rally `Completed` + discussion note | Final sign-off |
 
 ---
 
-## Protocolo Detallado por Fase
+## Detailed Protocol by Phase
 
-### Fase 0: Detección de Stack Tecnológico
-1. Ejecutar `.github/skills/sdlc-automation/scripts/detect-stack.bat` (Windows) o `detect-stack.sh` (Unix).
-2. **Python:** Gestor (`poetry`/`pipenv`/`pip`), Test runner (`pytest`/`unittest`), Linter (`ruff`/`flake8`).
-3. **Java:** Maven (`pom.xml` ➔ `mvn test`) o Gradle (`build.gradle` ➔ `gradle test`).
+### Phase 0: Technology Stack Discovery
+1. Run `.github/skills/sdlc-automation/scripts/detect-stack.bat` (Windows) or `detect-stack.sh` (Unix).
+2. **Python:** Package manager (`poetry`/`pipenv`/`pip`), test runner (`pytest`/`unittest`), linter (`ruff`/`flake8`).
+3. **Java:** Maven (`pom.xml` ➔ `mvn test`) or Gradle (`build.gradle` ➔ `gradle test`).
 
-### Fase 1: Ingesta Rally y Máquina de Estados
-1. Consultar Rally con campos mínimos: `FormattedID,ObjectID,Name,Description,AcceptanceCriteria,ScheduleState,Owner,Iteration,Project`.
-2. **Reglas de Estado (`ScheduleState`):**
-   - `Accepted`: **ABORTAR inmediatamente** (inmutable).
-   - `Completed`: Advertir y solicitar confirmación para reprocesar.
-   - `Defined`: Promover a `In-Progress`.
-   - `In-Progress`: Continuar.
-3. Normalizar HTML a Markdown plano.
-4. 🚪 **Gate 1:** Presentar ID, título, criterios detectados y cambio de estado. Esperar confirmación.
+### Phase 1: Rally Ingestion & State Machine
+1. Query Rally with minimum fields: `FormattedID,ObjectID,Name,Description,AcceptanceCriteria,ScheduleState,Owner,Iteration,Project`.
+2. **State Machine Rules (`ScheduleState`):**
+   - `Accepted`: **ABORT IMMEDIATELY** (immutable).
+   - `Completed`: Warn user and request confirmation before reprocessing.
+   - `Defined`: Promote to `In-Progress`.
+   - `In-Progress`: Continue.
+3. Sanitize HTML into clean Markdown.
+4. 🚪 **Gate 1:** Present ticket ID, title, acceptance criteria count, and state transition. Wait for explicit confirmation.
 
-### Fase 2: Especificaciones Técnicas (Spec-Driven)
-1. **`.docs/requerimientos.md`:** Aplicar `templates/requerimientos.md`. Transformar cada criterio a **EARS** (`references/ears-notation.md`):
-   - `CUANDO` (Evento), `MIENTRAS` (Estado), `SI` (Excepción/Error), `DONDE` (Opcional), `EL SISTEMA DEBERÁ` (Ubicuo).
-2. **`.docs/diseño.md`:** Aplicar `templates/diseño.md`.
-   - **Java:** **Arquitectura Hexagonal Estricta** (`domain/` puro sin dependencias, `application/port/`, `infrastructure/adapter/`).
-   - **Python:** **Arquitectura por Capas** (`routers/` ➔ `services/` ➔ `models/` ➔ `repositories/`), salvo dominio de alta complejidad.
-   - Diagrama Mermaid, inventario de archivos, contratos y estrategia de pruebas.
-3. 🚪 **Gate 2:** Presentar ambos documentos. **Prohibido escribir código sin aprobación explícita.**
+### Phase 2: Technical Specifications (Spec-Driven)
+1. **`.docs/requirements.md`:** Apply `templates/requirements.md`. Map each acceptance criterion to **EARS** (`references/ears-notation.md`):
+   - `WHEN` (Event), `WHILE` (State), `IF` (Error/Exception), `WHERE` (Optional), `THE SYSTEM SHALL` (Ubiquitous).
+2. **`.docs/design.md`:** Apply `templates/design.md`.
+   - **Java:** **Mandatory Hexagonal Architecture** (`domain/` pure without framework imports, `application/port/`, `infrastructure/adapter/`).
+   - **Python:** **Layered Architecture** (`routers/` ➔ `services/` ➔ `models/` ➔ `repositories/`), unless high-complexity core domain justifies hexagonal.
+   - Mermaid diagram, file inventory, contracts, and test strategy.
+3. 🚪 **Gate 2:** Present both documents. **DO NOT write functional code without explicit user approval.**
 
-### Fase 3: Implementación y Bucle de Auto-Sanación
-1. Implementar código según `.docs/diseño.md`.
-2. Añadir cabecera de trazabilidad en cada archivo afectado:
-   - Python: `# Rally: {FormattedID} — Requisito EARS: {ID_REQUISITO}`
-   - Java: `// Rally: {FormattedID} — Requisito EARS: {ID_REQUISITO}`
-3. **Bucle de Auto-Sanación (Self-Healing Loop):**
-   - Ejecutar suite de pruebas (`pytest` o `mvn/gradle test`).
-   - Si fallan: analizar stack trace, aplicar corrección quirúrgica y reejecutar (máx. 3 intentos).
-   - Si persiste tras 3 intentos: detenerse y solicitar intervención humana.
-4. Validar `references/quality-checklist.md` (sin secretos, SQL parametrizado, validación de tipos).
-5. 🚪 **Gate 3:** Presentar resumen de cambios, cobertura y tests en verde (100%). Esperar confirmación.
+### Phase 3: Implementation & Self-Healing Loop
+1. Implement changes adhering strictly to `.docs/design.md`.
+2. Add inline traceability header to each affected file:
+   - Python: `# Rally: {FormattedID} — EARS Requirement: {REQ_ID}`
+   - Java: `// Rally: {FormattedID} — EARS Requirement: {REQ_ID}`
+3. **Self-Healing Quality Loop:**
+   - Run project test suite (`pytest` or `mvn/gradle test`).
+   - If tests fail: diagnose trace, apply minimal surgical fix, re-run (max 3 iterations).
+   - If still failing after 3 attempts: halt and request human assistance.
+4. Validate against `references/quality-checklist.md` (zero exposed secrets, parameterized SQL, strictly typed validation).
+5. 🚪 **Gate 3:** Present summary of changes, coverage, and 100% green tests. Wait for confirmation.
 
-### Fase 4: Git Workflow y GitLab Draft MR
-1. Ejecutar `.github/skills/sdlc-automation/scripts/git-workflow.bat` / `.sh` o comandos equivalentes:
-   - Rama: `feature/{FormattedID}-{slug-titulo}`
+### Phase 4: Git Workflow & GitLab Draft MR
+1. Run `.github/skills/sdlc-automation/scripts/git-workflow.bat` / `.sh`:
+   - Branch: `feature/{FormattedID}-{title-slug}`
    - Commit: `feat({FormattedID}): {Title}`
    - Push: `git push -u origin HEAD`
-2. Generar `.docs/report.md` con matriz de trazabilidad y métricas.
-3. Crear Draft MR:
+2. Generate `.docs/report.md` with traceability matrix and metrics.
+3. Create Draft MR:
    ```bash
    glab mr create --title "feat({FormattedID}): {Title}" \
      --description-file .docs/report.md \
@@ -92,16 +92,16 @@ Este skill define la secuencia estandarizada para transformar un requerimiento d
      --draft --assignee @me \
      --label "bot-generated,{FormattedID}" --yes
    ```
-4. 🚪 **Gate 4:** Compartir enlace del MR creado y solicitar confirmación para cerrar ticket en Rally.
+4. 🚪 **Gate 4:** Share MR URL and request approval to close Rally ticket.
 
-### Fase 5: Cierre en Rally
-1. Actualizar Rally `ScheduleState` a `"Completed"`.
-2. Publicar comentario en la discusión de Rally con URL del MR, rama y referencias de especificación.
+### Phase 5: Rally Closure & Cross-Referencing
+1. Transition Rally `ScheduleState` to `"Completed"`.
+2. Post discussion note on Rally item with GitLab MR URL, branch name, and spec references.
 
 ---
 
-## Reglas de Seguridad Inviolables
-1. **PROHIBIDO** comandos destructivos (`git push --force`, `git reset --hard` remoto).
-2. **OBLIGATORIO** flag `--draft` en la creación de Merge Requests.
-3. **OBLIGATORIO** detenerse en cada una de las 4 compuertas humanas.
-4. **OBLIGATORIO** abortar si el ticket en Rally está en estado `Accepted`.
+## Safety Guardrails
+1. **FORBIDDEN:** Destructive git commands (`git push --force`, remote `git reset --hard`).
+2. **MANDATORY:** `--draft` flag on every Merge Request.
+3. **MANDATORY:** Stop and wait at all 4 human gates.
+4. **MANDATORY:** Abort if Rally item is already `Accepted`.

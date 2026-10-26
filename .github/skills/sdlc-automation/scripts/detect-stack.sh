@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Script: detect-stack.sh
-# Propósito: Detectar automáticamente el stack tecnológico (Python o Java),
-#            gestor de paquetes, comando de pruebas y linter del proyecto.
-# Salida: Pares clave-valor formateados para fácil consumo por scripts y agentes.
+# Purpose: Automatically detect project tech stack (Python or Java),
+#          package manager, test runner, and linter (Unix/Linux/macOS).
+# Output: Key-value pairs for easy consumption by scripts and agents.
 # ==============================================================================
 
 set -euo pipefail
@@ -19,15 +19,20 @@ BUILD_CMD="echo 'No build command detected'"
 RUNTIME_VERSION=""
 
 # ------------------------------------------------------------------------------
-# 1. Detección de Python
+# 1. Python Stack Detection
 # ------------------------------------------------------------------------------
+IS_PYTHON=0
 if [ -f "pyproject.toml" ] || [ -f "requirements.txt" ] || [ -f "Pipfile" ] || [ -f "setup.py" ]; then
+    IS_PYTHON=1
+fi
+
+if [ "$IS_PYTHON" -eq 1 ]; then
     STACK="python"
 
     if [ -f "poetry.lock" ]; then
         PACKAGE_MANAGER="poetry"
         TEST_CMD="poetry run pytest"
-        LINT_CMD="poetry run ruff check . || poetry run flake8"
+        LINT_CMD="poetry run ruff check ."
         BUILD_CMD="poetry build"
     elif [ -f "Pipfile" ]; then
         PACKAGE_MANAGER="pipenv"
@@ -36,39 +41,47 @@ if [ -f "pyproject.toml" ] || [ -f "requirements.txt" ] || [ -f "Pipfile" ] || [
         BUILD_CMD="pipenv lock"
     else
         PACKAGE_MANAGER="pip"
-        if command -v pytest >/dev/null 2>&1 || grep -qi "pytest" pyproject.toml 2>/dev/null || grep -qi "pytest" requirements.txt 2>/dev/null; then
+        TEST_CMD="python -m unittest discover"
+        if command -v pytest >/dev/null 2>&1; then
             TEST_CMD="pytest"
-        else
-            TEST_CMD="python -m unittest discover"
+        elif [ -f "pyproject.toml" ] && grep -qi "pytest" pyproject.toml; then
+            TEST_CMD="pytest"
+        elif [ -f "requirements.txt" ] && grep -qi "pytest" requirements.txt; then
+            TEST_CMD="pytest"
         fi
-        LINT_CMD="ruff check . 2>/dev/null || flake8 2>/dev/null || true"
-        BUILD_CMD="python -m build 2>/dev/null || true"
+
+        LINT_CMD="flake8"
+        if command -v ruff >/dev/null 2>&1; then
+            LINT_CMD="ruff check ."
+        fi
+        BUILD_CMD="python -m build"
     fi
 
     if command -v python3 >/dev/null 2>&1; then
-        RUNTIME_VERSION=$(python3 --version 2>/dev/null || echo "")
+        RUNTIME_VERSION=$(python3 --version 2>&1 || true)
     elif command -v python >/dev/null 2>&1; then
-        RUNTIME_VERSION=$(python --version 2>/dev/null || echo "")
+        RUNTIME_VERSION=$(python --version 2>&1 || true)
     fi
+fi
 
 # ------------------------------------------------------------------------------
-# 2. Detección de Java (Maven)
+# 2. Java (Maven) Stack Detection
 # ------------------------------------------------------------------------------
-elif [ -f "pom.xml" ]; then
+if [ -f "pom.xml" ]; then
     STACK="java-maven"
     PACKAGE_MANAGER="maven"
     TEST_CMD="mvn test"
     LINT_CMD="mvn checkstyle:check"
     BUILD_CMD="mvn clean compile"
-
     if command -v java >/dev/null 2>&1; then
-        RUNTIME_VERSION=$(java -version 2>&1 | head -n 1)
+        RUNTIME_VERSION=$(java -version 2>&1 | head -n 1 || true)
     fi
+fi
 
 # ------------------------------------------------------------------------------
-# 3. Detección de Java (Gradle)
+# 3. Java (Gradle) Stack Detection
 # ------------------------------------------------------------------------------
-elif [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
+if [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
     STACK="java-gradle"
     PACKAGE_MANAGER="gradle"
     if [ -f "./gradlew" ]; then
@@ -80,14 +93,13 @@ elif [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
         BUILD_CMD="gradle build"
         LINT_CMD="gradle check"
     fi
-
     if command -v java >/dev/null 2>&1; then
-        RUNTIME_VERSION=$(java -version 2>&1 | head -n 1)
+        RUNTIME_VERSION=$(java -version 2>&1 | head -n 1 || true)
     fi
 fi
 
 # ------------------------------------------------------------------------------
-# Emisión estructurada de resultados
+# Emit Results
 # ------------------------------------------------------------------------------
 cat <<EOF
 STACK=$STACK

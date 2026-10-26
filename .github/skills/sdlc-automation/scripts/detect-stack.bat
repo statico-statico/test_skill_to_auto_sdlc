@@ -1,9 +1,9 @@
 @echo off
 rem ==============================================================================
 rem Script: detect-stack.bat
-rem Propósito: Detectar automáticamente el stack tecnológico (Python o Java),
-rem            gestor de paquetes, comando de pruebas y linter del proyecto (Windows Batch).
-rem Salida: Pares clave-valor formateados para fácil consumo por scripts y agentes.
+rem Purpose: Automatically detect project tech stack (Python or Java),
+rem          package manager, test runner, and linter (Windows Batch).
+rem Output: Key-value pairs for easy consumption by scripts and agents.
 rem ==============================================================================
 
 setlocal EnableDelayedExpansion
@@ -21,7 +21,7 @@ set "BUILD_CMD=echo 'No build command detected'"
 set "RUNTIME_VERSION="
 
 rem ------------------------------------------------------------------------------
-rem 1. Detección de Python
+rem 1. Python Stack Detection
 rem ------------------------------------------------------------------------------
 set "IS_PYTHON=0"
 if exist "pyproject.toml" set "IS_PYTHON=1"
@@ -35,7 +35,7 @@ if "%IS_PYTHON%"=="1" (
     if exist "poetry.lock" (
         set "PACKAGE_MANAGER=poetry"
         set "TEST_CMD=poetry run pytest"
-        set "LINT_CMD=poetry run ruff check . || poetry run flake8"
+        set "LINT_CMD=poetry run ruff check ."
         set "BUILD_CMD=poetry build"
     ) else if exist "Pipfile" (
         set "PACKAGE_MANAGER=pipenv"
@@ -74,7 +74,7 @@ if "%IS_PYTHON%"=="1" (
 )
 
 rem ------------------------------------------------------------------------------
-rem 2. Detección de Java (Maven)
+rem 2. Java (Maven) Stack Detection
 rem ------------------------------------------------------------------------------
 if exist "pom.xml" (
     set "STACK=java-maven"
@@ -92,7 +92,7 @@ if exist "pom.xml" (
 )
 
 rem ------------------------------------------------------------------------------
-rem 3. Detección de Java (Gradle)
+rem 3. Java (Gradle) Stack Detection
 rem ------------------------------------------------------------------------------
 set "IS_GRADLE=0"
 if exist "build.gradle" set "IS_GRADLE=1"

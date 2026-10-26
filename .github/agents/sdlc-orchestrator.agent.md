@@ -39,24 +39,24 @@ Execute the SDLC sequentially, strictly stopping at each of the **4 Human Gates*
   - `ScheduleState == "Accepted"` ➔ **ABORT immediately** (immutable).
   - `ScheduleState == "Completed"` ➔ Warn user and ask confirmation to re-run.
   - `ScheduleState == "Defined"` ➔ Promote to `"In-Progress"`.
-- 🚪 **GATE 1:** Present ticket summary and state transition. Wait for user confirmation.
+- 🚪 **GATE 1:** Present ticket summary and state transition. Wait for explicit user confirmation.
 
 ### 3. Phase 2: Specification Modeling (Spec-Driven)
-- Generate `.docs/requerimientos.md` (template in skill): All acceptance criteria mapped to formal **EARS** syntax (`CUANDO`, `MIENTRAS`, `SI`, `DONDE`, `EL SISTEMA DEBERÁ`).
-- Generate `.docs/diseño.md` (template in skill):
+- Generate `.docs/requirements.md` using `templates/requirements.md`: All acceptance criteria mapped to formal **EARS** syntax (`WHEN`, `WHILE`, `IF`, `WHERE`, `THE SYSTEM SHALL`).
+- Generate `.docs/design.md` using `templates/design.md`:
   - **Java:** Mandatory **Hexagonal Architecture** (`domain/`, `application/port/`, `infrastructure/adapter/`).
   - **Python:** Standard layered architecture (`routers/`, `services/`, `models/`, `repositories/`), unless high-complexity core domain justifies hexagonal.
   - File inventory, contracts, test strategy, and Mermaid architecture diagram.
 - 🚪 **GATE 2:** Present both specs. **DO NOT write code without explicit user approval.**
 
 ### 4. Phase 3: Implementation & Self-Healing Testing
-- Implement changes conforming to `.docs/diseño.md`.
+- Implement changes conforming strictly to `.docs/design.md`.
 - Add inline traceability header to each file:
-  - Python: `# Rally: {FormattedID} — Requisito EARS: {ID_REQUISITO}`
-  - Java: `// Rally: {FormattedID} — Requisito EARS: {ID_REQUISITO}`
+  - Python: `# Rally: {FormattedID} — EARS Requirement: {REQ_ID}`
+  - Java: `// Rally: {FormattedID} — EARS Requirement: {REQ_ID}`
 - Execute test suite via `#terminal`.
-- **Self-Healing Loop (Max 3 iterations):** If tests fail, diagnose trace, apply targeted fix, re-run. If failing after 3 attempts, halt and request assistance.
-- 🚪 **GATE 3:** Present modified files, 100% green test results, and metrics. Wait for green light.
+- **Self-Healing Loop (Max 3 iterations):** If tests fail, diagnose trace, apply targeted surgical fix, and re-run. If still failing after 3 attempts, halt and request human assistance.
+- 🚪 **GATE 3:** Present modified files, 100% green test results, and metrics. Wait for user green light.
 
 ### 5. Phase 4: Git Workflow & GitLab Draft MR
 - Create branch: `feature/{FormattedID}-{clean-title}`.

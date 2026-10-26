@@ -1,49 +1,49 @@
-# 📊 Reporte Post-Tarea: {RALLY_FORMATTED_ID} — {TITLE}
+# 📊 Post-Task Report: {RALLY_FORMATTED_ID} — {TITLE}
 
-> **Identificador Rally:** `{RALLY_FORMATTED_ID}`  
-> **Fecha de Finalización:** {DATE}  
-> **Estado de Implementación:** ✅ Completado exitosamente  
-
----
-
-## 1. Resumen Ejecutivo
-
-- **Objetivo:** {DESCRIPCION_RESUMIDA_DEL_OBJETIVO_IMPLEMENTADO}
-- **Resultado:** Implementación finalizada con 100% de pruebas en verde y especificaciones EARS satisfechas.
-- **Impacto:** {IMPACTO_TECNICO_O_DE_NEGOCIO_LOGRADO}
+> **Rally FormattedID:** `{RALLY_FORMATTED_ID}`  
+> **Completion Date:** {DATE}  
+> **Implementation Status:** ✅ Successfully Completed  
 
 ---
 
-## 2. Matriz de Trazabilidad del Desarrollo
+## 1. Executive Summary
 
-| Archivo Afectado | Acción | Requisito EARS | Comentario / Función |
+- **Objective:** {CONCISE_SUMMARY_OF_IMPLEMENTED_GOAL}
+- **Technical Outcome:** Implementation finalized with 100% test pass rate and formal EARS specifications satisfied.
+- **System Impact:** {SYSTEM_OR_BUSINESS_IMPACT}
+
+---
+
+## 2. Traceability Matrix
+
+| Impacted File | Action | EARS Requirement | Rationale / Method |
 | :--- | :--- | :--- | :--- |
-| `{path/to/file_1.ext}` | Modificado | `REQ-EVT-01` | Handler / Servicio principal |
-| `{path/to/file_2.ext}` | Creado | `REQ-STA-01` | Módulo de gestión o persistencia |
-| `{path/to/test_file.ext}` | Creado | `REQ-EVT-01, REQ-NEG-01` | Suite de pruebas automatizadas |
+| `{path/to/file_1.ext}` | Modified | `REQ-EVT-01` | Primary handler or application service |
+| `{path/to/file_2.ext}` | Created | `REQ-STA-01` | Persistence or state adapter |
+| `{path/to/test_file.ext}` | Created | `REQ-EVT-01, REQ-ERR-01` | Automated test suite |
 
 ---
 
-## 3. Métricas de Calidad y Pruebas
+## 3. Quality & Test Metrics
 
-| Métrica | Resultado Obtenido | Umbral Mínimo | Estado |
+| Metric | Result | Minimum Threshold | Status |
 | :--- | :--- | :--- | :--- |
-| **Pruebas Automatizadas** | `{PASS_COUNT}/{TOTAL_COUNT}` | 100% | ✅ Aprobado |
-| **Cobertura de Código** | `{COVERAGE_PERCENTAGE}%` | ≥ 80% | ✅ Aprobado |
-| **Errores de Linting** | `0 errores` | 0 errores | ✅ Aprobado |
+| **Automated Tests** | `{PASS_COUNT}/{TOTAL_COUNT}` passing | 100% | ✅ Passed |
+| **Code Coverage** | `{COVERAGE_PERCENTAGE}%` | ≥ 80% | ✅ Passed |
+| **Static Analysis / Lint** | `0 errors` | 0 errors | ✅ Passed |
 
 ---
 
-## 4. Checklist de Seguridad y Calidad Aplicada
+## 4. Applied Quality & Security Checklist
 
-- [x] **Sin Secretos:** Verificado que no hay credenciales, tokens ni claves en el código ni configuración.
-- [x] **Inyecciones Mitigadas (OWASP A03):** Consultas SQL parametrizadas / ORM seguro.
-- [x] **Control de Acceso (OWASP A01):** Validación de permisos y roles en la capa de negocio.
-- [x] **Cabecera de Trazabilidad:** Identificador de Rally (`{RALLY_FORMATTED_ID}`) incluido en los archivos modificados.
-- [x] **Principios SOLID:** Responsabilidad única e interfaces segregadas respetadas.
-- [x] **Manejo de Errores:** Excepciones tipadas y logs estructurados sin registrar datos sensibles (PII).
+- [x] **No Secrets:** Verified that zero API keys, secrets, or credentials exist in source code or configs.
+- [x] **Injection Prevention (OWASP A03):** Parameterized SQL queries and secure ORM mapping.
+- [x] **Access Control (OWASP A01):** Authorization validated at domain/service layer.
+- [x] **Inline Traceability:** Header added to modified files referencing `{RALLY_FORMATTED_ID}`.
+- [x] **SOLID Principles:** Single responsibility and clean dependency inversion adhered to.
+- [x] **Defensive Error Handling:** Typed domain exceptions; structured logs free of PII.
 
 ---
 
-## 5. Deuda Técnica o Acciones Pendientes
-- {Ninguna deuda técnica introducida / Indicar si requiere migración de BD o variables en CI/CD}
+## 5. Technical Debt & Follow-up Items
+- {No technical debt introduced / Specify required DB migrations or CI/CD environment variables}

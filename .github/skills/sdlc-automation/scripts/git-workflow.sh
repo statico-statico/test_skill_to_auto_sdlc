@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Script: git-workflow.sh
-# Propósito: Automatizar el flujo completo de Git y GitLab CLI:
-#            Creación de rama, commit semántico, push remoto y generación de MR Draft.
-# Parámetros:
-#   $1 - Rally FormattedID (ej. US10293)
-#   $2 - Título del requerimiento (ej. "Implement Session Timeout Warning")
-#   $3 - Rama destino (opcional, por defecto: main)
-#   $4 - Archivo de descripción del MR (opcional, por defecto: .docs/report.md)
+# Purpose: Automate Git and GitLab CLI workflow on Unix/Linux/macOS:
+#          Branch creation, conventional commit, remote push, and Draft MR generation.
+# Parameters:
+#   $1 - Rally FormattedID (e.g. US10293)
+#   $2 - Requirement title (e.g. "Implement Session Timeout Warning")
+#   $3 - Target branch (optional, default: main)
+#   $4 - MR description file (optional, default: .docs/report.md)
 # ==============================================================================
 
 set -euo pipefail
@@ -18,72 +18,71 @@ TARGET_BRANCH="${3:-main}"
 DESC_FILE="${4:-.docs/report.md}"
 
 if [ -z "$FORMATTED_ID" ] || [ -z "$TITLE" ]; then
-    echo "ERROR: Parámetros obligatorios faltantes." >&2
-    echo "Uso: $0 <FormattedID> <Title> [TargetBranch] [DescriptionFile]" >&2
+    echo "ERROR: Missing required parameters." >&2
+    echo "Usage: $0 <FormattedID> <Title> [TargetBranch] [DescriptionFile]" >&2
     exit 1
 fi
 
-# Validar que git está inicializado
+# 1. Validate that git is initialized
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    echo "ERROR: El directorio actual no es un repositorio Git válido." >&2
+    echo "ERROR: Current directory is not a valid Git repository." >&2
     exit 1
 fi
 
-# Validar archivo de descripción
+# 2. Validate description file
 if [ ! -f "$DESC_FILE" ]; then
     if [ -f ".docs/mr-description.md" ]; then
         DESC_FILE=".docs/mr-description.md"
     else
-        echo "ADVERTENCIA: Archivo de reporte $DESC_FILE no encontrado. Se creará descripción mínima." >&2
+        echo "WARNING: Report file $DESC_FILE not found. Creating fallback description." >&2
         mkdir -p .docs
         cat <<EOF > .docs/temp-mr-desc.md
 # feat($FORMATTED_ID): $TITLE
 
-Automatización SDLC completada por Copilot Agent.
+SDLC automation completed by Agent.
 Rally ID: $FORMATTED_ID
 EOF
         DESC_FILE=".docs/temp-mr-desc.md"
     fi
 fi
 
-# 1. Generar nombre de rama normalizado
+# 3. Generate sanitized branch slug
 CLEAN_TITLE=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/^-+|-+$//g' | cut -c 1-40)
 BRANCH_NAME="feature/${FORMATTED_ID}-${CLEAN_TITLE}"
 
-echo "==> Creando rama de trabajo: $BRANCH_NAME"
+echo "==> Creating working branch: $BRANCH_NAME"
 git checkout -B "$BRANCH_NAME"
 
-# 2. Preparar y crear commit semántico
-echo "==> Registrando cambios locales..."
+# 4. Stage and create conventional commit
+echo "==> Staging local changes..."
 git add .
 
-# Verificar si hay cambios reales para commitear
 if git diff-index --quiet HEAD -- 2>/dev/null; then
-    echo "AVISO: No se detectaron modificaciones nuevas en el árbol de trabajo para commitear."
+    echo "NOTICE: No local modifications detected to commit."
 else
     COMMIT_MSG="feat(${FORMATTED_ID}): ${TITLE}
 
-- Implementa requerimientos aprobados de Rally ${FORMATTED_ID}
-- Especificaciones: .docs/requerimientos.md
-- Diseno tecnico: .docs/diseno.md
-- Trazabilidad cruzada bidireccional
+- Implements approved requirements for Rally ${FORMATTED_ID}
+- Specifications: .docs/requirements.md
+- Technical design: .docs/design.md
+- Bidirectional Rally-GitLab traceability
 
 Rally-Issue: ${FORMATTED_ID}"
 
     git commit -m "$COMMIT_MSG"
-    echo "==> Commit generado con éxito."
+    echo "==> Conventional commit created successfully."
 fi
 
-# 3. Publicar rama en remoto
-echo "==> Publicando rama en origen..."
+# 5. Push branch to remote origin
+echo "==> Pushing branch upstream..."
 if git remote | grep -q "origin"; then
     git push -u origin HEAD
 else
-    echo "AVISO: No se detectó un remote 'origin'. Omitiendo 'git push'." >&2
+    echo "NOTICE: No 'origin' remote found. Skipping 'git push'." >&2
 fi
 
-# 4. Crear Merge Request en GitLab vía glab CLI
-echo "==> Creando Merge Request en GitLab con glab CLI..."
+# 6. Create Draft Merge Request via glab CLI
+echo "==> Creating Draft Merge Request via glab CLI..."
 if command -v glab >/dev/null 2>&1; then
     MR_OUTPUT=$(glab mr create \
         --title "feat(${FORMATTED_ID}): ${TITLE}" \
@@ -97,30 +96,29 @@ if command -v glab >/dev/null 2>&1; then
 
     echo "$MR_OUTPUT"
 
-    # Extraer URL del MR si está en la salida
     MR_URL=$(echo "$MR_OUTPUT" | grep -Eo 'https?://[^ ]+/merge_requests/[0-9]+' | head -n 1 || echo "")
     MR_IID=$(echo "$MR_URL" | grep -Eo '[0-9]+$' || echo "")
 
     if [ -n "$MR_IID" ] && [ -n "$MR_URL" ]; then
-        echo "==> Añadiendo nota técnica automatizada al MR #$MR_IID..."
-        glab mr note create "$MR_IID" -m "## 🤖 Reporte de Validación Automatizada
+        echo "==> Adding automated validation note to MR #$MR_IID..."
+        glab mr note create "$MR_IID" -m "## 🤖 Automated Validation Report
 - **Rally Story:** $FORMATTED_ID
-- **Documentación de Especificación:** \`.docs/requerimientos.md\` y \`.docs/diseno.md\`
-- **Reporte Post-Tarea:** \`.docs/report.md\`
+- **Documentation:** \`.docs/requirements.md\` and \`.docs/design.md\`
+- **Post-Task Report:** \`.docs/report.md\`
 
-Merge Request generado en modo borrador (**Draft**) a la espera de aprobación humana." >/dev/null 2>&1 || true
+Merge Request created in **Draft** mode awaiting human review." >/dev/null 2>&1 || true
     fi
 
     cat <<EOF
 
 ================================================================================
-RESULTADO DEL FLUJO GIT:
+GIT WORKFLOW RESULT:
 BRANCH_NAME=$BRANCH_NAME
-MR_URL=${MR_URL:-"No disponible / Pendiente de verificación"}
+MR_URL=${MR_URL:-"Not available / Pending verification"}
 MR_IID=${MR_IID:-"N/A"}
 ================================================================================
 EOF
 else
-    echo "ADVERTENCIA: El binario 'glab' no está disponible en el entorno." >&2
-    echo "La rama '$BRANCH_NAME' fue creada localmente." >&2
+    echo "WARNING: 'glab' binary is not installed in the environment." >&2
+    echo "Branch '$BRANCH_NAME' was created locally." >&2
 fi

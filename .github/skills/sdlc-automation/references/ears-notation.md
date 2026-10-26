@@ -1,39 +1,39 @@
-# Referencia Rápida: Notación EARS (Easy Approach to Requirements Syntax)
+# Quick Reference: EARS Notation (Easy Approach to Requirements Syntax)
 
-Estándar sintáctico obligatorio para transformar criterios de aceptación de Rally a requisitos verificables en `.docs/requerimientos.md`.
+Mandatory syntax standard for translating Rally acceptance criteria into testable specifications in `.docs/requirements.md`.
 
 ---
 
-## 1. Los 5 Patrones EARS
+## 1. The 5 Core EARS Patterns
 
-| Patrón | Estructura Sintáctica | Cuándo Usarlo |
+| Pattern | Syntactic Structure | When to Use |
 | :--- | :--- | :--- |
-| **Ubicuo** | `EL SISTEMA DEBERÁ <acción>` | Requisito continuo y transversal. Siempre activo. |
-| **Evento** | `CUANDO <evento>, EL SISTEMA DEBERÁ <acción>` | Respuesta inmediata a un estímulo externo o de usuario. |
-| **Estado** | `MIENTRAS <estado activo>, EL SISTEMA DEBERÁ <acción>` | Comportamiento vigente solo durante un estado específico. |
-| **Opcional** | `DONDE <característica habilitada>, EL SISTEMA DEBERÁ <acción>` | Comportamiento condicionado a configuración o feature flag. |
-| **No Deseado / Error** | `SI <condición de error/excepción>, EL SISTEMA DEBERÁ <acción>` | Manejo de excepciones, fallos de red o datos inválidos. |
+| **Ubiquitous** | `THE SYSTEM SHALL <action>` | Continuous, system-wide constraint without a trigger. Always active. |
+| **Event-Driven** | `WHEN <trigger>, THE SYSTEM SHALL <action>` | Immediate response to a specific event or external stimulus. |
+| **State-Driven** | `WHILE <active state>, THE SYSTEM SHALL <action>` | Behavior that applies only while the system is in a given state. |
+| **Optional Feature** | `WHERE <feature is enabled>, THE SYSTEM SHALL <action>` | Behavior applicable only when a configuration or feature flag is enabled. |
+| **Unwanted Behavior** | `IF <error condition/exception>, THE SYSTEM SHALL <action>` | Handling exceptions, invalid input, timeout, or external failure. |
 
 ---
 
-## 2. Patrón Compuesto
+## 2. Compound Patterns
 
-Para requisitos que combinan evento con estado previo o manejo de error:
-- `MIENTRAS <estado>, CUANDO <evento>, EL SISTEMA DEBERÁ <acción>`
-- `MIENTRAS <estado>, SI <condición error>, EL SISTEMA DEBERÁ <acción de recuperación>`
-
----
-
-## 3. Ejemplos de Referencia
-
-- **Ubicuo:** `EL SISTEMA DEBERÁ cifrar los tokens de sesión en reposo con AES-256-GCM.`
-- **Evento:** `CUANDO el usuario envíe una solicitud de renovación válida, EL SISTEMA DEBERÁ extender la expiración en 15 minutos.`
-- **Estado:** `MIENTRAS la sesión permanezca activa, EL SISTEMA DEBERÁ responder al endpoint de heartbeat en menos de 200 ms.`
-- **Opcional:** `DONDE el flag 'AUDIT_LOG_VERBOSE' esté activo, EL SISTEMA DEBERÁ incluir los encabezados HTTP en el registro de auditoría.`
-- **Error:** `SI el token recibido ha expirado, EL SISTEMA DEBERÁ devolver HTTP 401 Unauthorized y revocar el identificador en caché.`
+For requirements triggered by an event while in a specific state or handling errors in a state:
+- `WHILE <state>, WHEN <trigger>, THE SYSTEM SHALL <action>`
+- `WHILE <state>, IF <error condition>, THE SYSTEM SHALL <recovery action>`
 
 ---
 
-## 4. Reglas de Validación
-- Todo requisito debe iniciar con su palabra clave en mayúsculas (`CUANDO`, `MIENTRAS`, `SI`, `DONDE`, `EL SISTEMA DEBERÁ`).
-- Evitar adjetivos vagos ("rápido", "seguro", "amigable"). Incluir siempre umbrales medibles (ms, códigos HTTP, algoritmos).
+## 3. Concrete Examples
+
+- **Ubiquitous:** `THE SYSTEM SHALL encrypt all session tokens at rest using AES-256-GCM.`
+- **Event-Driven:** `WHEN the user submits a valid renewal request, THE SYSTEM SHALL extend session expiration by 15 minutes.`
+- **State-Driven:** `WHILE the user session remains authenticated, THE SYSTEM SHALL respond to heartbeat requests within 200 ms.`
+- **Optional Feature:** `WHERE the 'AUDIT_LOG_VERBOSE' flag is enabled, THE SYSTEM SHALL record HTTP headers in the audit trail.`
+- **Unwanted Behavior:** `IF the provided token has expired, THE SYSTEM SHALL return HTTP 401 Unauthorized and invalidate the session in cache.`
+
+---
+
+## 4. Syntax Rules
+- Every requirement MUST start with its uppercase keyword (`WHEN`, `WHILE`, `IF`, `WHERE`, `THE SYSTEM SHALL`).
+- Avoid vague terms ("fast", "secure", "user-friendly"). Always state measurable thresholds (e.g., ms, HTTP status codes, specific algorithms).
